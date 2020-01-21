@@ -1,0 +1,5 @@
+source "/home/musr/dev/esp/esp-idf/components/app_update/Kconfig.projbuild"
+source "/home/musr/dev/esp/esp-idf/components/bootloader/Kconfig.projbuild"
+source "/home/musr/dev/esp/esp-idf/components/esptool_py/Kconfig.projbuild"
+source "/home/musr/dev/esp/projects/blink/main/Kconfig.projbuild"
+source "/home/musr/dev/esp/esp-idf/components/partition_table/Kconfig.projbuild"

@@ -1,0 +1,13 @@
+# Target labels
+ bootloader
+# Source files and their labels
+/home/musr/dev/esp/projects/blink/build/CMakeFiles/bootloader
+/home/musr/dev/esp/projects/blink/build/CMakeFiles/bootloader.rule
+/home/musr/dev/esp/projects/blink/build/CMakeFiles/bootloader-complete.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-install.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-mkdir.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-download.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-update.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-patch.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-configure.rule
+/home/musr/dev/esp/projects/blink/build/bootloader-prefix/src/bootloader-stamp/bootloader-build.rule

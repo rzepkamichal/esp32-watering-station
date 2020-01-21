@@ -1,0 +1,1 @@
+cmd='/usr/bin/cmake;-DSDKCONFIG=/home/musr/dev/esp/projects/blink/sdkconfig;-DIDF_PATH=/home/musr/dev/esp/esp-idf;-DIDF_TARGET=esp32;-DPYTHON_DEPS_CHECKED=1;-DPYTHON=/home/musr/.espressif/python_env/idf4.1_py2.7_env/bin/python;-DEXTRA_COMPONENT_DIRS=/home/musr/dev/esp/esp-idf/components/bootloader;-DLEGACY_INCLUDE_COMMON_HEADERS=;-GNinja;<SOURCE_DIR><SOURCE_SUBDIR>'
