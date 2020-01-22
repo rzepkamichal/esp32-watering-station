@@ -127,121 +127,182 @@
 // }
 
 
-// #include <stdio.h>
-// #include <freertos/FreeRTOS.h>
-// #include <freertos/task.h>
-// #include <sys/time.h>
-// #include <hd44780.h>
-
-
-// static uint32_t get_time_sec()
-// {
-//     struct timeval tv;
-//     gettimeofday(&tv, NULL);
-//     return tv.tv_sec;
-// }
-
-// static const uint8_t char_data[] = {
-//     0x04, 0x0e, 0x0e, 0x0e, 0x1f, 0x00, 0x04, 0x00,
-//     0x1f, 0x11, 0x0a, 0x04, 0x0a, 0x11, 0x1f, 0x00
-// };
-
-// void lcd_test(void *pvParameters)
-// {
-//     hd44780_t lcd = {
-//         .font = HD44780_FONT_5X8,
-//         .lines = 2,
-//         .pins = {
-//             .rs = GPIO_NUM_19,
-//             .e  = GPIO_NUM_18,
-//             .d4 = GPIO_NUM_5,
-//             .d5 = GPIO_NUM_17,
-//             .d6 = GPIO_NUM_16,
-//             .d7 = GPIO_NUM_4,
-//             .bl = HD44780_NOT_USED
-//         }
-//     };
-
-//     ESP_ERROR_CHECK(hd44780_init(&lcd));
-
-//     hd44780_upload_character(&lcd, 0, char_data);
-//     hd44780_upload_character(&lcd, 1, char_data + 8);
-
-//     hd44780_gotoxy(&lcd, 0, 0);
-//     hd44780_puts(&lcd, "\x08 Hello world");
-//     hd44780_gotoxy(&lcd, 0, 1);
-//     hd44780_puts(&lcd, "\x09 Its working xd");
-
-
-// }
 
 // void app_main()
 // {
 //     xTaskCreate(lcd_test, "lcd_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
 // }
 
+// #include <stdio.h>
+// #include <freertos/FreeRTOS.h>
+// #include <freertos/task.h>
+// #include <ds1307.h>
+// #include <string.h>
+
+// #if defined(CONFIG_IDF_TARGET_ESP8266)
+// #define SDA_GPIO 4
+// #define SCL_GPIO 5
+// #else
+// #define SDA_GPIO 22
+// #define SCL_GPIO 23
+// #endif
+
+// #define CONFIG_FREERTOS_HZ 100
+
+// void ds1307_test(void *pvParameters)
+// {
+//     i2c_dev_t dev;
+//     memset(&dev, 0, sizeof(i2c_dev_t));
+
+//     ESP_ERROR_CHECK(ds1307_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO));
+
+//     // setup datetime: 2018-04-11 00:52:10
+//     struct tm time = {
+//         .tm_year = 2018,
+//         .tm_mon  = 3,  // 0-based
+//         .tm_mday = 11,
+//         .tm_hour = 0,
+//         .tm_min  = 52,
+//         .tm_sec  = 10
+//     };
+//     ESP_ERROR_CHECK(ds1307_set_time(&dev, &time));
+
+//     uint8_t buff[2];
+//     buff[0] = 12;
+//     buff[1] = 15;
+
+//     ds1307_write_ram(&dev, 0, buff, 2);
+
+//     uint8_t buffer[2];
+
+//     while (1)
+//     {
+//         ds1307_get_time(&dev, &time);
+
+//         printf("%04d-%02d-%02d %02d:%02d:%02d\n", time.tm_year, time.tm_mon + 1,
+//             time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
+
+//             ds1307_read_ram(&dev, 0, buffer, 2);
+
+//         printf("buffer:%d:%d\n", buffer[0], buffer[1]);
+
+//         vTaskDelay(1000 / portTICK_PERIOD_MS);
+//     }
+// }
+
+// void app_main()
+// {
+//     ESP_ERROR_CHECK(i2cdev_init());
+
+//     xTaskCreate(ds1307_test, "ds1307_test", configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL);
+// }
+
+
+
+
+
+#include <sys/time.h>
 #include <stdio.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <ds1307.h>
 #include <string.h>
+#include <stdlib.h>
+#include <hd44780.h>
+#include <menu.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "driver/gpio.h"
 
-#if defined(CONFIG_IDF_TARGET_ESP8266)
-#define SDA_GPIO 4
-#define SCL_GPIO 5
-#else
-#define SDA_GPIO 22
-#define SCL_GPIO 23
-#endif
 
-#define CONFIG_FREERTOS_HZ 100
+#define GPIO_BTN_BACK 27
+#define GPIO_BTN_OK 14
+#define GPIO_BTN_CON 12
+#define GPIO_INPUT_PIN_SEL ((1ULL << GPIO_BTN_BACK) | (1ULL << GPIO_BTN_OK) | (1ULL << GPIO_BTN_CON))
+#define ESP_INTR_FLAG_DEFAULT 0
 
-void ds1307_test(void *pvParameters)
+static xQueueHandle gpio_evt_queue = NULL;
+
+static void IRAM_ATTR gpio_isr_handler(void *arg)
 {
-    i2c_dev_t dev;
-    memset(&dev, 0, sizeof(i2c_dev_t));
 
-    ESP_ERROR_CHECK(ds1307_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO));
+    uint32_t gpio_num = (uint32_t)arg;
+    xQueueSendFromISR(gpio_evt_queue, &gpio_num, NULL);
+}
 
-    // setup datetime: 2018-04-11 00:52:10
-    struct tm time = {
-        .tm_year = 2018,
-        .tm_mon  = 3,  // 0-based
-        .tm_mday = 11,
-        .tm_hour = 0,
-        .tm_min  = 52,
-        .tm_sec  = 10
+static void gpio_task_example(void *arg)
+{
+
+    hd44780_t lcd = {
+        .font = HD44780_FONT_5X8,
+        .lines = 2,
+        .pins = {
+            .rs = GPIO_NUM_19,
+            .e  = GPIO_NUM_18,
+            .d4 = GPIO_NUM_5,
+            .d5 = GPIO_NUM_17,
+            .d6 = GPIO_NUM_16,
+            .d7 = GPIO_NUM_4,
+            .bl = HD44780_NOT_USED
+        }
     };
-    ESP_ERROR_CHECK(ds1307_set_time(&dev, &time));
 
-    uint8_t buff[2];
-    buff[0] = 12;
-    buff[1] = 15;
+    ESP_ERROR_CHECK(hd44780_init(&lcd));
 
-    ds1307_write_ram(&dev, 0, buff, 2);
+    menu_t menu = {
+        .state = IDLE,
+        .continue_count = 0,
+        .BTN_BACK_PIN = GPIO_BTN_BACK,
+        .BTN_OK_PIN = GPIO_BTN_OK,
+        .BTN_CON_PIN = GPIO_BTN_CON,
+    };
 
-    uint8_t buffer[2];
-
-    while (1)
+    uint32_t io_num;
+    for (;;)
     {
-        ds1307_get_time(&dev, &time);
-        
+        if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY))
+        {
 
-        printf("%04d-%02d-%02d %02d:%02d:%02d\n", time.tm_year, time.tm_mon + 1,
-            time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
+            printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
 
-            ds1307_read_ram(&dev, 0, buffer, 2);
-        
-        printf("buffer:%d:%d\n", buffer[0], buffer[1]);
+            menu_handle_btn(&menu, &lcd, io_num);
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+            //debounce
+            vTaskDelay(300 / portTICK_PERIOD_MS);
+            xQueueReset(gpio_evt_queue);
+        }
     }
 }
 
-void app_main()
+void app_main(void)
 {
-    ESP_ERROR_CHECK(i2cdev_init());
 
-    xTaskCreate(ds1307_test, "ds1307_test", configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL);
+    gpio_config_t io_conf;
+
+    //interrupt of rising edge
+    io_conf.intr_type = GPIO_INTR_NEGEDGE;
+    //bit mask of the pins, use GPIO4/5 here
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+    //set as input mode
+    io_conf.mode = GPIO_MODE_INPUT;
+    //enable pull-up mode
+    io_conf.pull_up_en = 1;
+    io_conf.pull_down_en = 0;
+    gpio_config(&io_conf);
+
+    //change gpio intrrupt type for one pin
+    // gpio_set_intr_type(GPIO_BTN_BACK, GPIO_INTR_HIGH_LEVEL);
+    // gpio_set_intr_type(GPIO_BTN_OK, GPIO_INTR_NEGEDGE);
+    // gpio_set_intr_type(GPIO_BTN_CON, GPIO_INTR_NEGEDGE);
+
+    //create a queue to handle gpio event from isr
+    gpio_evt_queue = xQueueCreate(1, sizeof(uint32_t));
+    //start gpio task
+    xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+
+    //install gpio isr service
+    gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
+
+    //hook isr handler for specific gpio pin
+    gpio_isr_handler_add(GPIO_BTN_BACK, gpio_isr_handler, (void *)GPIO_BTN_BACK);
+    gpio_isr_handler_add(GPIO_BTN_OK, gpio_isr_handler, (void *)GPIO_BTN_OK);
+    gpio_isr_handler_add(GPIO_BTN_CON, gpio_isr_handler, (void *)GPIO_BTN_CON);
 }
-

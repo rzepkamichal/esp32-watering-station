@@ -65,6 +65,7 @@
  /home/musr/dev/esp/projects/blink/build/mcp23x17/libmcp23x17.a
  /home/musr/dev/esp/projects/blink/build/mcp4725/libmcp4725.a
  /home/musr/dev/esp/projects/blink/build/mdns/libmdns.a
+ /home/musr/dev/esp/projects/blink/build/menu/libmenu.a
  /home/musr/dev/esp/projects/blink/build/mqtt/libmqtt.a
  /home/musr/dev/esp/projects/blink/build/ms5611/libms5611.a
  /home/musr/dev/esp/projects/blink/build/newlib/libnewlib.a
