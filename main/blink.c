@@ -249,12 +249,15 @@ static void gpio_task_example(void *arg)
 
     menu_t menu = {
         .state = IDLE,
-        .continue_count = 0,
+        .continue_count = -1,
+        .selected_zone = -1,
+        .selected_interval = -11,
         .BTN_BACK_PIN = GPIO_BTN_BACK,
         .BTN_OK_PIN = GPIO_BTN_OK,
         .BTN_CON_PIN = GPIO_BTN_CON,
     };
 
+    menu_flush_display(&menu, &lcd);
     uint32_t io_num;
     for (;;)
     {
@@ -264,7 +267,8 @@ static void gpio_task_example(void *arg)
             printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
 
             menu_handle_btn(&menu, &lcd, io_num);
-
+            menu_flush_display(&menu, &lcd);
+            
             //debounce
             vTaskDelay(300 / portTICK_PERIOD_MS);
             xQueueReset(gpio_evt_queue);
