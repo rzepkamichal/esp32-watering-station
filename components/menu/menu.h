@@ -10,7 +10,7 @@
 #define INTERVAL_SELECTION_MSG "Choose interval"
 #define ON_TIME_SELECTION_MSG "Set ON time"
 #define OFF_TIME_SELECTION_MSG "Set OFF time"
-#define DAY_SELECTION_MSG "Set days"
+#define DAY_SELECTION_MSG "Set active days"
 
 typedef enum MenuState
 {
@@ -40,6 +40,16 @@ typedef enum WeekDaySelectionState
     WEEKDAY_COUNT = 7
 } week_day_selection_state;
 
+static char weekday_names[7][2] = {
+    {'M', '\0'},
+    {'T', '\0'},
+    {'W', '\0'},
+    {'T', '\0'},
+    {'F', '\0'},
+    {'S', '\0'},
+    {'S', '\0'},
+};
+
 typedef struct
 {
     uint8_t state;
@@ -48,6 +58,7 @@ typedef struct
     int8_t continue_count;
     int8_t selected_zone;
     int8_t selected_interval;
+    uint8_t selected_weekday_configuration;
     const uint8_t BTN_BACK_PIN;
     const uint8_t BTN_OK_PIN;
     const uint8_t BTN_CON_PIN;
