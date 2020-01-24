@@ -44,6 +44,29 @@ esp_err_t handle_interval_selection_state(menu_t *menu, const hd44780_t *lcd, ui
     }
     else if (menu->BTN_OK_PIN == gpio_btn)
     {
+        menu->state = ON_TIME_SELECTION;
+        menu->selected_interval = menu->continue_count % 3;
+        menu->continue_count = 0;
+        menu->time_selection_state = HOUR;
+    }
+    else if (menu->BTN_CON_PIN == gpio_btn)
+    {
+        menu->continue_count = (menu->continue_count + 1) % 3;
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t handle_on_time_selection_state(menu_t *menu, const hd44780_t *lcd, uint8_t gpio_btn)
+{
+    if (menu->BTN_BACK_PIN == gpio_btn)
+    {
+        menu->state = ZONE_SELECTION;
+        menu->continue_count = 0;
+        menu->selected_zone = -1;
+    }
+    else if (menu->BTN_OK_PIN == gpio_btn)
+    {
         menu->state = INTERVAL_SELECTION;
     }
     else if (menu->BTN_CON_PIN == gpio_btn)
@@ -95,14 +118,9 @@ esp_err_t display_zone_selection(menu_t *menu, const hd44780_t *lcd)
     hd44780_puts(lcd, ZONE_SELECTION_MSG);
     hd44780_gotoxy(lcd, 0, 1);
 
-    if (menu->continue_count % 2 == 0)
-    {
-        hd44780_puts(lcd, "Zone: 0");
-    }
-    else
-    {
-        hd44780_puts(lcd, "Zone: 1");
-    }
+    char display_data[9];
+    snprintf(display_data, 9, "Zone: %d", menu->continue_count % 2);
+    hd44780_puts(lcd, display_data);
 
     return ESP_OK;
 }
@@ -114,18 +132,9 @@ esp_err_t display_interval_selection(menu_t *menu, const hd44780_t *lcd)
     hd44780_puts(lcd, INTERVAL_SELECTION_MSG);
     hd44780_gotoxy(lcd, 0, 1);
 
-    if (menu->continue_count % 3 == 0)
-    {
-        hd44780_puts(lcd, "Interval: 0");
-    }
-    else if (menu->continue_count % 3 == 1)
-    {
-        hd44780_puts(lcd, "Interval: 1");
-    }
-    else
-    {
-        hd44780_puts(lcd, "Interval: 2");
-    }
+    char display_data[13];
+    snprintf(display_data, 13, "Interval: %d", menu->continue_count % 3);
+    hd44780_puts(lcd, display_data);
 
     return ESP_OK;
 }

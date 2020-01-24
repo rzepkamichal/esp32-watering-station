@@ -92,11 +92,13 @@
  /home/musr/dev/esp/projects/blink/build/tcp_transport/libtcp_transport.a
  /home/musr/dev/esp/projects/blink/build/tcpip_adapter/libtcpip_adapter.a
  /home/musr/dev/esp/projects/blink/build/tda74xx/libtda74xx.a
+ /home/musr/dev/esp/projects/blink/build/timer_setup/libtimer_setup.a
  /home/musr/dev/esp/projects/blink/build/tsl2561/libtsl2561.a
  /home/musr/dev/esp/projects/blink/build/tsl4531/libtsl4531.a
  /home/musr/dev/esp/projects/blink/build/ulp/libulp.a
  /home/musr/dev/esp/projects/blink/build/ultrasonic/libultrasonic.a
  /home/musr/dev/esp/projects/blink/build/unity/libunity.a
+ /home/musr/dev/esp/projects/blink/build/util/libutil.a
  /home/musr/dev/esp/projects/blink/build/vfs/libvfs.a
  /home/musr/dev/esp/projects/blink/build/wear_levelling/libwear_levelling.a
  /home/musr/dev/esp/projects/blink/build/wifi_provisioning/libwifi_provisioning.a

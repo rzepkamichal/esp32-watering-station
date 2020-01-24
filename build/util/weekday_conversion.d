@@ -1,4 +1,6 @@
-menu.o: /home/musr/dev/esp/projects/blink/components/menu/menu.c \
+weekday_conversion.o: \
+ /home/musr/dev/esp/projects/blink/components/util/weekday_conversion.c \
+ /home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h \
  /home/musr/dev/esp/projects/blink/components/menu/menu.h \
  /home/musr/dev/esp/esp-idf-lib/components/hd44780/hd44780.h \
  /home/musr/dev/esp/esp-idf/components/driver/include/driver/gpio.h \
@@ -31,8 +33,9 @@ menu.o: /home/musr/dev/esp/projects/blink/components/menu/menu.c \
  /home/musr/dev/esp/esp-idf/components/soc/include/hal/gpio_types.h \
  /home/musr/dev/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h \
  /home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h \
- /home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h \
- /home/musr/dev/esp/projects/blink/components/menu/menu.h
+ /home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h
+
+/home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h:
 
 /home/musr/dev/esp/projects/blink/components/menu/menu.h:
 
@@ -99,6 +102,4 @@ menu.o: /home/musr/dev/esp/projects/blink/components/menu/menu.c \
 /home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h:
 
 /home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h:
-
-/home/musr/dev/esp/projects/blink/components/menu/menu.h:
-/home/musr/dev/esp/projects/blink/components/menu/./menu.c:
+/home/musr/dev/esp/projects/blink/components/util/./weekday_conversion.c:

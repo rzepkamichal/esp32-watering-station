@@ -31,6 +31,8 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
  /home/musr/dev/esp/esp-idf/components/soc/include/hal/gpio_types.h \
  /home/musr/dev/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h \
  /home/musr/dev/esp/projects/blink/components/menu/menu.h \
+ /home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h \
+ /home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
@@ -118,6 +120,10 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
 /home/musr/dev/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h:
 
 /home/musr/dev/esp/projects/blink/components/menu/menu.h:
+
+/home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h:
+
+/home/musr/dev/esp/projects/blink/components/util/weekday_conversion.h:
 
 /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 

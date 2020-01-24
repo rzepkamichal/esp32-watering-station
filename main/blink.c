@@ -126,8 +126,6 @@
 //     wifi_init_sta();
 // }
 
-
-
 // void app_main()
 // {
 //     xTaskCreate(lcd_test, "lcd_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
@@ -197,21 +195,17 @@
 //     xTaskCreate(ds1307_test, "ds1307_test", configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL);
 // }
 
-
-
-
-
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <hd44780.h>
 #include <menu.h>
+#include <timer_setup.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
-
 
 #define GPIO_BTN_BACK 27
 #define GPIO_BTN_OK 14
@@ -231,30 +225,51 @@ static void IRAM_ATTR gpio_isr_handler(void *arg)
 static void gpio_task_example(void *arg)
 {
 
+    timer_setup_t timer_setup = {
+
+        .interval_0_on_hour = 0,
+        .interval_0_on_minute = 0,
+        .interval_0_weekday_config = 127,
+        .interval_0_off_hour = 0,
+        .interval_0_off_minute = 0,
+
+        .interval_1_on_hour = 0,
+        .interval_1_on_minute = 0,
+        .interval_1_weekday_config = 127,
+        .interval_1_off_hour = 0,
+        .interval_1_off_minute = 0,
+
+        .interval_2_on_hour = 0,
+        .interval_2_on_minute = 0,
+        .interval_2_weekday_config = 127,
+        .interval_2_off_hour = 0,
+        .interval_2_off_minute = 0};
+
     hd44780_t lcd = {
         .font = HD44780_FONT_5X8,
         .lines = 2,
         .pins = {
             .rs = GPIO_NUM_19,
-            .e  = GPIO_NUM_18,
+            .e = GPIO_NUM_18,
             .d4 = GPIO_NUM_5,
             .d5 = GPIO_NUM_17,
             .d6 = GPIO_NUM_16,
             .d7 = GPIO_NUM_4,
-            .bl = HD44780_NOT_USED
-        }
-    };
+            .bl = HD44780_NOT_USED}};
 
     ESP_ERROR_CHECK(hd44780_init(&lcd));
 
     menu_t menu = {
         .state = IDLE,
+        .time_selection_state = -1,
+        .weekday_selection_state = -1,
         .continue_count = -1,
         .selected_zone = -1,
         .selected_interval = -11,
         .BTN_BACK_PIN = GPIO_BTN_BACK,
         .BTN_OK_PIN = GPIO_BTN_OK,
         .BTN_CON_PIN = GPIO_BTN_CON,
+        .timer_setup = &timer_setup
     };
 
     menu_flush_display(&menu, &lcd);
@@ -268,7 +283,7 @@ static void gpio_task_example(void *arg)
 
             menu_handle_btn(&menu, &lcd, io_num);
             menu_flush_display(&menu, &lcd);
-            
+
             //debounce
             vTaskDelay(300 / portTICK_PERIOD_MS);
             xQueueReset(gpio_evt_queue);
