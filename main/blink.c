@@ -225,7 +225,27 @@ static void IRAM_ATTR gpio_isr_handler(void *arg)
 static void gpio_task_example(void *arg)
 {
 
-    timer_setup_t timer_setup = {
+    timer_setup_t zone0_timer_setup = {
+
+        .interval_0_on_hour = 0,
+        .interval_0_on_minute = 0,
+        .interval_0_weekday_config = 127,
+        .interval_0_off_hour = 0,
+        .interval_0_off_minute = 0,
+
+        .interval_1_on_hour = 0,
+        .interval_1_on_minute = 0,
+        .interval_1_weekday_config = 127,
+        .interval_1_off_hour = 0,
+        .interval_1_off_minute = 0,
+
+        .interval_2_on_hour = 0,
+        .interval_2_on_minute = 0,
+        .interval_2_weekday_config = 127,
+        .interval_2_off_hour = 0,
+        .interval_2_off_minute = 0};
+
+    timer_setup_t zone1_timer_setup = {
 
         .interval_0_on_hour = 0,
         .interval_0_on_minute = 0,
@@ -269,8 +289,8 @@ static void gpio_task_example(void *arg)
         .BTN_BACK_PIN = GPIO_BTN_BACK,
         .BTN_OK_PIN = GPIO_BTN_OK,
         .BTN_CON_PIN = GPIO_BTN_CON,
-        .timer_setup = &timer_setup
-    };
+        .zone0_timer_setup = &zone0_timer_setup,
+        .zone1_timer_setup = &zone1_timer_setup};
 
     menu_flush_display(&menu, &lcd);
     uint32_t io_num;

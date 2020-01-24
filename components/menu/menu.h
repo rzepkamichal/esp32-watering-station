@@ -18,8 +18,8 @@ typedef enum MenuState
     ZONE_SELECTION = 1,
     INTERVAL_SELECTION = 2,
     ON_TIME_SELECTION = 3,
-    OFF_TIME_SELECTION = 4,
-    DAY_SELECTION = 5
+    DAY_SELECTION = 4,
+    OFF_TIME_SELECTION = 5
 } menu_state;
 
 typedef enum TimeSelectionState
@@ -51,7 +51,8 @@ typedef struct
     const uint8_t BTN_BACK_PIN;
     const uint8_t BTN_OK_PIN;
     const uint8_t BTN_CON_PIN;
-    timer_setup_t *timer_setup;
+    timer_setup_t *zone0_timer_setup;
+    timer_setup_t *zone1_timer_setup;
 
 } menu_t;
 
