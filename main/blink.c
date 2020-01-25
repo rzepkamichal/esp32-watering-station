@@ -281,11 +281,11 @@ static void gpio_task_example(void *arg)
 
     menu_t menu = {
         .state = IDLE,
-        .time_selection_state = -1,
-        .weekday_selection_state = -1,
-        .continue_count = -1,
-        .selected_zone = -1,
-        .selected_interval = -1,
+        .time_selection_state = HOUR,
+        .weekday_selection_state = MONDAY,
+        .continue_count = 0,
+        .selected_zone = 0,
+        .selected_interval = 0,
         .selected_weekday_configuration = 127,
         .BTN_BACK_PIN = GPIO_BTN_BACK,
         .BTN_OK_PIN = GPIO_BTN_OK,
