@@ -82,6 +82,7 @@
  /home/musr/dev/esp/projects/blink/build/protocomm/libprotocomm.a
  /home/musr/dev/esp/projects/blink/build/pthread/libpthread.a
  /home/musr/dev/esp/projects/blink/build/qmc5883l/libqmc5883l.a
+ /home/musr/dev/esp/projects/blink/build/rtc_persistance/librtc_persistance.a
  /home/musr/dev/esp/projects/blink/build/sdmmc/libsdmmc.a
  /home/musr/dev/esp/projects/blink/build/sht3x/libsht3x.a
  /home/musr/dev/esp/projects/blink/build/si7021/libsi7021.a
@@ -98,9 +99,9 @@
  /home/musr/dev/esp/projects/blink/build/ulp/libulp.a
  /home/musr/dev/esp/projects/blink/build/ultrasonic/libultrasonic.a
  /home/musr/dev/esp/projects/blink/build/unity/libunity.a
- /home/musr/dev/esp/projects/blink/build/util/libutil.a
  /home/musr/dev/esp/projects/blink/build/vfs/libvfs.a
  /home/musr/dev/esp/projects/blink/build/wear_levelling/libwear_levelling.a
+ /home/musr/dev/esp/projects/blink/build/weekday_conversion/libweekday_conversion.a
  /home/musr/dev/esp/projects/blink/build/wifi_provisioning/libwifi_provisioning.a
  /home/musr/dev/esp/projects/blink/build/wpa_supplicant/libwpa_supplicant.a
  /home/musr/dev/esp/projects/blink/build/xtensa/libxtensa.a

@@ -131,70 +131,6 @@
 //     xTaskCreate(lcd_test, "lcd_test", configMINIMAL_STACK_SIZE * 3, NULL, 5, NULL);
 // }
 
-// #include <stdio.h>
-// #include <freertos/FreeRTOS.h>
-// #include <freertos/task.h>
-// #include <ds1307.h>
-// #include <string.h>
-
-// #if defined(CONFIG_IDF_TARGET_ESP8266)
-// #define SDA_GPIO 4
-// #define SCL_GPIO 5
-// #else
-// #define SDA_GPIO 22
-// #define SCL_GPIO 23
-// #endif
-
-// #define CONFIG_FREERTOS_HZ 100
-
-// void ds1307_test(void *pvParameters)
-// {
-//     i2c_dev_t dev;
-//     memset(&dev, 0, sizeof(i2c_dev_t));
-
-//     ESP_ERROR_CHECK(ds1307_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO));
-
-//     // setup datetime: 2018-04-11 00:52:10
-//     struct tm time = {
-//         .tm_year = 2018,
-//         .tm_mon  = 3,  // 0-based
-//         .tm_mday = 11,
-//         .tm_hour = 0,
-//         .tm_min  = 52,
-//         .tm_sec  = 10
-//     };
-//     ESP_ERROR_CHECK(ds1307_set_time(&dev, &time));
-
-//     uint8_t buff[2];
-//     buff[0] = 12;
-//     buff[1] = 15;
-
-//     ds1307_write_ram(&dev, 0, buff, 2);
-
-//     uint8_t buffer[2];
-
-//     while (1)
-//     {
-//         ds1307_get_time(&dev, &time);
-
-//         printf("%04d-%02d-%02d %02d:%02d:%02d\n", time.tm_year, time.tm_mon + 1,
-//             time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
-
-//             ds1307_read_ram(&dev, 0, buffer, 2);
-
-//         printf("buffer:%d:%d\n", buffer[0], buffer[1]);
-
-//         vTaskDelay(1000 / portTICK_PERIOD_MS);
-//     }
-// }
-
-// void app_main()
-// {
-//     ESP_ERROR_CHECK(i2cdev_init());
-
-//     xTaskCreate(ds1307_test, "ds1307_test", configMINIMAL_STACK_SIZE * 8, NULL, 5, NULL);
-// }
-
 #include <sys/time.h>
 #include <stdio.h>
 #include <string.h>
@@ -206,6 +142,21 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 #include "driver/gpio.h"
+#include "esp_types.h"
+#include "driver/periph_ctrl.h"
+#include "driver/timer.h"
+#include <stdio.h>
+#include <ds1307.h>
+#include "rtc_persistence.h"
+
+#define SDA_GPIO 22
+#define SCL_GPIO 23
+
+#define TIMER_DIVIDER 16                             //  Hardware timer clock divider
+#define TIMER_SCALE (TIMER_BASE_CLK / TIMER_DIVIDER) // convert counter value to seconds
+#define TIMER_INTERVAL0_SEC (1)                      // sample test interval for the first timer
+#define TEST_WITHOUT_RELOAD 0                        // testing will be done without auto reload
+#define TEST_WITH_RELOAD 1                           // testing will be done with auto reload
 
 #define GPIO_BTN_BACK 27
 #define GPIO_BTN_OK 14
@@ -213,7 +164,206 @@
 #define GPIO_INPUT_PIN_SEL ((1ULL << GPIO_BTN_BACK) | (1ULL << GPIO_BTN_OK) | (1ULL << GPIO_BTN_CON))
 #define ESP_INTR_FLAG_DEFAULT 0
 
+/*
+ * A sample structure to pass events
+ * from the timer interrupt handler to the main program.
+ */
+typedef struct
+{
+    int type; // the type of timer's event
+    int timer_group;
+    int timer_idx;
+    uint64_t timer_counter_value;
+} timer_event_t;
+
+static timer_setup_t zone0_timer_setup = {
+
+    .interval_0_on_hour = 0,
+    .interval_0_on_minute = 0,
+    .interval_0_weekday_config = 127,
+    .interval_0_off_hour = 0,
+    .interval_0_off_minute = 0,
+
+    .interval_1_on_hour = 0,
+    .interval_1_on_minute = 0,
+    .interval_1_weekday_config = 127,
+    .interval_1_off_hour = 0,
+    .interval_1_off_minute = 0,
+
+    .interval_2_on_hour = 0,
+    .interval_2_on_minute = 0,
+    .interval_2_weekday_config = 127,
+    .interval_2_off_hour = 0,
+    .interval_2_off_minute = 0};
+
+static timer_setup_t zone1_timer_setup = {
+
+    .interval_0_on_hour = 0,
+    .interval_0_on_minute = 0,
+    .interval_0_weekday_config = 127,
+    .interval_0_off_hour = 0,
+    .interval_0_off_minute = 0,
+
+    .interval_1_on_hour = 0,
+    .interval_1_on_minute = 0,
+    .interval_1_weekday_config = 127,
+    .interval_1_off_hour = 0,
+    .interval_1_off_minute = 0,
+
+    .interval_2_on_hour = 0,
+    .interval_2_on_minute = 0,
+    .interval_2_weekday_config = 127,
+    .interval_2_off_hour = 0,
+    .interval_2_off_minute = 0};
+
+static hd44780_t lcd = {
+    .font = HD44780_FONT_5X8,
+    .lines = 2,
+    .pins = {
+        .rs = GPIO_NUM_19,
+        .e = GPIO_NUM_18,
+        .d4 = GPIO_NUM_5,
+        .d5 = GPIO_NUM_17,
+        .d6 = GPIO_NUM_16,
+        .d7 = GPIO_NUM_4,
+        .bl = HD44780_NOT_USED}};
+
+static menu_t menu = {
+    .state = IDLE,
+    .time_selection_state = HOUR,
+    .weekday_selection_state = MONDAY,
+    .continue_count = 0,
+    .selected_zone = 0,
+    .selected_interval = 0,
+    .selected_weekday_configuration = 127,
+    .BTN_BACK_PIN = GPIO_BTN_BACK,
+    .BTN_OK_PIN = GPIO_BTN_OK,
+    .BTN_CON_PIN = GPIO_BTN_CON,
+    .zone0_timer_setup = &zone0_timer_setup,
+    .zone1_timer_setup = &zone1_timer_setup};
+
 static xQueueHandle gpio_evt_queue = NULL;
+xQueueHandle timer_queue;
+
+/*
+ * Timer group0 ISR handler
+ *
+ * Note:
+ * We don't call the timer API here because they are not declared with IRAM_ATTR.
+ * If we're okay with the timer irq not being serviced while SPI flash cache is disabled,
+ * we can allocate this interrupt without the ESP_INTR_FLAG_IRAM flag and use the normal API.
+ */
+void IRAM_ATTR timer_group0_isr(void *para)
+{
+    timer_spinlock_take(TIMER_GROUP_0);
+    int timer_idx = (int)para;
+
+    /* Retrieve the interrupt status and the counter value
+       from the timer that reported the interrupt */
+    uint32_t timer_intr = timer_group_get_intr_status_in_isr(TIMER_GROUP_0);
+    uint64_t timer_counter_value = timer_group_get_counter_value_in_isr(TIMER_GROUP_0, timer_idx);
+
+    /* Prepare basic event data
+       that will be then sent back to the main program task */
+    timer_event_t evt;
+    evt.timer_group = 0;
+    evt.timer_idx = timer_idx;
+    evt.timer_counter_value = timer_counter_value;
+
+    /* Clear the interrupt
+       and update the alarm time for the timer with without reload */
+    if (timer_intr & TIMER_INTR_T0)
+    {
+        evt.type = TEST_WITHOUT_RELOAD;
+        timer_group_clr_intr_status_in_isr(TIMER_GROUP_0, TIMER_0);
+        timer_counter_value += (uint64_t)(TIMER_INTERVAL0_SEC * TIMER_SCALE);
+        timer_group_set_alarm_value_in_isr(TIMER_GROUP_0, timer_idx, timer_counter_value);
+    }
+    else
+    {
+        evt.type = -1; // not supported even type
+    }
+
+    /* After the alarm has been triggered
+      we need enable it again, so it is triggered the next time */
+    timer_group_enable_alarm_in_isr(TIMER_GROUP_0, timer_idx);
+
+    /* Now just send the event data back to the main program task */
+    xQueueSendFromISR(timer_queue, &evt, NULL);
+    timer_spinlock_give(TIMER_GROUP_0);
+}
+
+/*
+ * Initialize selected timer of the timer group 0
+ *
+ * timer_idx - the timer number to initialize
+ * auto_reload - should the timer auto reload on alarm?
+ * timer_interval_sec - the interval of alarm to set
+ */
+static void example_tg0_timer_init(int timer_idx,
+                                   bool auto_reload, double timer_interval_sec)
+{
+    /* Select and initialize basic parameters of the timer */
+    timer_config_t config;
+    config.divider = TIMER_DIVIDER;
+    config.counter_dir = TIMER_COUNT_UP;
+    config.counter_en = TIMER_PAUSE;
+    config.alarm_en = TIMER_ALARM_EN;
+    config.intr_type = TIMER_INTR_LEVEL;
+    config.auto_reload = auto_reload;
+#ifdef TIMER_GROUP_SUPPORTS_XTAL_CLOCK
+    config.clk_src = TIMER_SRC_CLK_APB;
+#endif
+    timer_init(TIMER_GROUP_0, timer_idx, &config);
+
+    /* Timer's counter will initially start from value below.
+       Also, if auto_reload is set, this value will be automatically reload on alarm */
+    timer_set_counter_value(TIMER_GROUP_0, timer_idx, 0x00000000ULL);
+
+    /* Configure the alarm value and the interrupt on alarm. */
+    timer_set_alarm_value(TIMER_GROUP_0, timer_idx, timer_interval_sec * TIMER_SCALE);
+    timer_enable_intr(TIMER_GROUP_0, timer_idx);
+    timer_isr_register(TIMER_GROUP_0, timer_idx, timer_group0_isr,
+                       (void *)timer_idx, ESP_INTR_FLAG_IRAM, NULL);
+
+    timer_start(TIMER_GROUP_0, timer_idx);
+}
+
+/*
+ * The main task of this example program
+ */
+static void timer_example_evt_task(void *arg)
+{
+
+    i2c_dev_t dev;
+    memset(&dev, 0, sizeof(i2c_dev_t));
+
+    ESP_ERROR_CHECK(ds1307_init_desc(&dev, 0, SDA_GPIO, SCL_GPIO));
+
+    // setup datetime: 2018-04-11 00:52:10
+    struct tm time = {
+        .tm_year = 2018,
+        .tm_mon = 3, // 0-based
+        .tm_mday = 11,
+        .tm_hour = 0,
+        .tm_min = 52,
+        .tm_sec = 10};
+    ESP_ERROR_CHECK(ds1307_set_time(&dev, &time));
+
+    load_configuration(&dev, &menu);
+
+    while (1)
+    {
+        timer_event_t evt;
+        xQueueReceive(timer_queue, &evt, portMAX_DELAY);
+        ds1307_get_time(&dev, &time);
+
+        printf("%04d-%02d-%02d %02d:%02d:%02d\n", time.tm_year, time.tm_mon + 1,
+               time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
+
+        save_configuration(&dev, &menu);
+    }
+}
 
 static void IRAM_ATTR gpio_isr_handler(void *arg)
 {
@@ -225,73 +375,7 @@ static void IRAM_ATTR gpio_isr_handler(void *arg)
 static void gpio_task_example(void *arg)
 {
 
-    timer_setup_t zone0_timer_setup = {
-
-        .interval_0_on_hour = 0,
-        .interval_0_on_minute = 0,
-        .interval_0_weekday_config = 127,
-        .interval_0_off_hour = 0,
-        .interval_0_off_minute = 0,
-
-        .interval_1_on_hour = 0,
-        .interval_1_on_minute = 0,
-        .interval_1_weekday_config = 127,
-        .interval_1_off_hour = 0,
-        .interval_1_off_minute = 0,
-
-        .interval_2_on_hour = 0,
-        .interval_2_on_minute = 0,
-        .interval_2_weekday_config = 127,
-        .interval_2_off_hour = 0,
-        .interval_2_off_minute = 0};
-
-    timer_setup_t zone1_timer_setup = {
-
-        .interval_0_on_hour = 0,
-        .interval_0_on_minute = 0,
-        .interval_0_weekday_config = 127,
-        .interval_0_off_hour = 0,
-        .interval_0_off_minute = 0,
-
-        .interval_1_on_hour = 0,
-        .interval_1_on_minute = 0,
-        .interval_1_weekday_config = 127,
-        .interval_1_off_hour = 0,
-        .interval_1_off_minute = 0,
-
-        .interval_2_on_hour = 0,
-        .interval_2_on_minute = 0,
-        .interval_2_weekday_config = 127,
-        .interval_2_off_hour = 0,
-        .interval_2_off_minute = 0};
-
-    hd44780_t lcd = {
-        .font = HD44780_FONT_5X8,
-        .lines = 2,
-        .pins = {
-            .rs = GPIO_NUM_19,
-            .e = GPIO_NUM_18,
-            .d4 = GPIO_NUM_5,
-            .d5 = GPIO_NUM_17,
-            .d6 = GPIO_NUM_16,
-            .d7 = GPIO_NUM_4,
-            .bl = HD44780_NOT_USED}};
-
     ESP_ERROR_CHECK(hd44780_init(&lcd));
-
-    menu_t menu = {
-        .state = IDLE,
-        .time_selection_state = HOUR,
-        .weekday_selection_state = MONDAY,
-        .continue_count = 0,
-        .selected_zone = 0,
-        .selected_interval = 0,
-        .selected_weekday_configuration = 127,
-        .BTN_BACK_PIN = GPIO_BTN_BACK,
-        .BTN_OK_PIN = GPIO_BTN_OK,
-        .BTN_CON_PIN = GPIO_BTN_CON,
-        .zone0_timer_setup = &zone0_timer_setup,
-        .zone1_timer_setup = &zone1_timer_setup};
 
     menu_flush_display(&menu, &lcd);
     uint32_t io_num;
@@ -328,6 +412,8 @@ void app_main(void)
     io_conf.pull_down_en = 0;
     gpio_config(&io_conf);
 
+    ESP_ERROR_CHECK(i2cdev_init());
+
     //change gpio intrrupt type for one pin
     // gpio_set_intr_type(GPIO_BTN_BACK, GPIO_INTR_HIGH_LEVEL);
     // gpio_set_intr_type(GPIO_BTN_OK, GPIO_INTR_NEGEDGE);
@@ -345,4 +431,8 @@ void app_main(void)
     gpio_isr_handler_add(GPIO_BTN_BACK, gpio_isr_handler, (void *)GPIO_BTN_BACK);
     gpio_isr_handler_add(GPIO_BTN_OK, gpio_isr_handler, (void *)GPIO_BTN_OK);
     gpio_isr_handler_add(GPIO_BTN_CON, gpio_isr_handler, (void *)GPIO_BTN_CON);
+
+    timer_queue = xQueueCreate(10, sizeof(timer_event_t));
+    example_tg0_timer_init(TIMER_0, TEST_WITHOUT_RELOAD, TIMER_INTERVAL0_SEC);
+    xTaskCreate(timer_example_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
 }

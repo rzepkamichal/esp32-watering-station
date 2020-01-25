@@ -1,5 +1,7 @@
-blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
- /home/musr/dev/esp/esp-idf/components/newlib/platform_include/sys/time.h \
+rtc_persistence.o: \
+ /home/musr/dev/esp/projects/blink/components/rtc_persistance/rtc_persistence.c \
+ /home/musr/dev/esp/projects/blink/components/rtc_persistance/rtc_persistence.h \
+ /home/musr/dev/esp/projects/blink/components/menu/menu.h \
  /home/musr/dev/esp/esp-idf-lib/components/hd44780/hd44780.h \
  /home/musr/dev/esp/esp-idf/components/driver/include/driver/gpio.h \
  /home/musr/dev/esp/projects/blink/build/include/sdkconfig.h \
@@ -30,9 +32,12 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
  /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/gpio_sig_map.h \
  /home/musr/dev/esp/esp-idf/components/soc/include/hal/gpio_types.h \
  /home/musr/dev/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h \
- /home/musr/dev/esp/projects/blink/components/menu/menu.h \
  /home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h \
  /home/musr/dev/esp/projects/blink/components/weekday_conversion/weekday_conversion.h \
+ /home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h \
+ /home/musr/dev/esp/esp-idf/components/newlib/platform_include/time.h \
+ /home/musr/dev/esp/esp-idf-lib/components/i2cdev/i2cdev.h \
+ /home/musr/dev/esp/esp-idf/components/driver/include/driver/i2c.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOSConfig.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/xtensa_config.h \
@@ -53,9 +58,14 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/mpu_wrappers.h \
  /home/musr/dev/esp/esp-idf/components/esp_common/include/esp_system.h \
  /home/musr/dev/esp/esp-idf/components/esp_common/include/esp_idf_version.h \
+ /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/semphr.h \
+ /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/queue.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/task.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/list.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/queue.h \
+ /home/musr/dev/esp/esp-idf/components/esp_ringbuf/include/freertos/ringbuf.h \
+ /home/musr/dev/esp/esp-idf/components/soc/include/hal/i2c_types.h \
+ /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/i2c_caps.h \
  /home/musr/dev/esp/esp-idf/components/driver/include/driver/periph_ctrl.h \
  /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/periph_defs.h \
  /home/musr/dev/esp/esp-idf/components/driver/include/driver/timer.h \
@@ -64,18 +74,11 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
  /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/timer_group_reg.h \
  /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/timer_group_struct.h \
  /home/musr/dev/esp/esp-idf/components/soc/include/hal/timer_types.h \
- /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/timer_group_caps.h \
- /home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h \
- /home/musr/dev/esp/esp-idf-lib/components/i2cdev/i2cdev.h \
- /home/musr/dev/esp/esp-idf/components/driver/include/driver/i2c.h \
- /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/semphr.h \
- /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/queue.h \
- /home/musr/dev/esp/esp-idf/components/esp_ringbuf/include/freertos/ringbuf.h \
- /home/musr/dev/esp/esp-idf/components/soc/include/hal/i2c_types.h \
- /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/i2c_caps.h \
- /home/musr/dev/esp/projects/blink/components/rtc_persistance/rtc_persistence.h
+ /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/timer_group_caps.h
 
-/home/musr/dev/esp/esp-idf/components/newlib/platform_include/sys/time.h:
+/home/musr/dev/esp/projects/blink/components/rtc_persistance/rtc_persistence.h:
+
+/home/musr/dev/esp/projects/blink/components/menu/menu.h:
 
 /home/musr/dev/esp/esp-idf-lib/components/hd44780/hd44780.h:
 
@@ -137,11 +140,17 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
 
 /home/musr/dev/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h:
 
-/home/musr/dev/esp/projects/blink/components/menu/menu.h:
-
 /home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h:
 
 /home/musr/dev/esp/projects/blink/components/weekday_conversion/weekday_conversion.h:
+
+/home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h:
+
+/home/musr/dev/esp/esp-idf/components/newlib/platform_include/time.h:
+
+/home/musr/dev/esp/esp-idf-lib/components/i2cdev/i2cdev.h:
+
+/home/musr/dev/esp/esp-idf/components/driver/include/driver/i2c.h:
 
 /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h:
 
@@ -183,11 +192,21 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
 
 /home/musr/dev/esp/esp-idf/components/esp_common/include/esp_idf_version.h:
 
+/home/musr/dev/esp/esp-idf/components/freertos/include/freertos/semphr.h:
+
+/home/musr/dev/esp/esp-idf/components/freertos/include/freertos/queue.h:
+
 /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/task.h:
 
 /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/list.h:
 
 /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/queue.h:
+
+/home/musr/dev/esp/esp-idf/components/esp_ringbuf/include/freertos/ringbuf.h:
+
+/home/musr/dev/esp/esp-idf/components/soc/include/hal/i2c_types.h:
+
+/home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/i2c_caps.h:
 
 /home/musr/dev/esp/esp-idf/components/driver/include/driver/periph_ctrl.h:
 
@@ -206,22 +225,4 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
 /home/musr/dev/esp/esp-idf/components/soc/include/hal/timer_types.h:
 
 /home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/timer_group_caps.h:
-
-/home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h:
-
-/home/musr/dev/esp/esp-idf-lib/components/i2cdev/i2cdev.h:
-
-/home/musr/dev/esp/esp-idf/components/driver/include/driver/i2c.h:
-
-/home/musr/dev/esp/esp-idf/components/freertos/include/freertos/semphr.h:
-
-/home/musr/dev/esp/esp-idf/components/freertos/include/freertos/queue.h:
-
-/home/musr/dev/esp/esp-idf/components/esp_ringbuf/include/freertos/ringbuf.h:
-
-/home/musr/dev/esp/esp-idf/components/soc/include/hal/i2c_types.h:
-
-/home/musr/dev/esp/esp-idf/components/soc/esp32/include/soc/i2c_caps.h:
-
-/home/musr/dev/esp/projects/blink/components/rtc_persistance/rtc_persistence.h:
-/home/musr/dev/esp/projects/blink/main/./blink.c:
+/home/musr/dev/esp/projects/blink/components/rtc_persistance/./rtc_persistence.c:
