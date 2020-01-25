@@ -109,12 +109,52 @@ esp_err_t handle_on_hour_selection_state(menu_t *menu, const hd44780_t *lcd, uin
     return ESP_OK;
 }
 
+uint8_t resolve_weekday_configuration(menu_t *menu)
+{
+    uint8_t weekday_configuration = 0;
+
+    if (menu->selected_zone == 0)
+    {
+
+        if (menu->selected_interval == 0)
+        {
+            weekday_configuration = menu->zone0_timer_setup->interval_0_weekday_config;
+        }
+        else if (menu->selected_interval == 1)
+        {
+            weekday_configuration = menu->zone0_timer_setup->interval_1_weekday_config;
+        }
+        else if (menu->selected_interval == 2)
+        {
+            weekday_configuration = menu->zone0_timer_setup->interval_2_weekday_config;
+        }
+    }
+    else if (menu->selected_zone == 1)
+    {
+        if (menu->selected_interval == 0)
+        {
+            weekday_configuration = menu->zone1_timer_setup->interval_0_weekday_config;
+        }
+        else if (menu->selected_interval == 1)
+        {
+            weekday_configuration = menu->zone1_timer_setup->interval_1_weekday_config;
+        }
+        else if (menu->selected_interval == 2)
+        {
+            weekday_configuration = menu->zone1_timer_setup->interval_2_weekday_config;
+        }
+    }
+
+    return weekday_configuration;
+}
+
 esp_err_t handle_on_minute_selection_state(menu_t *menu, const hd44780_t *lcd, uint8_t gpio_btn)
 {
     if (menu->BTN_OK_PIN == gpio_btn)
     {
         menu->state = DAY_SELECTION;
         menu->weekday_selection_state = MONDAY;
+        menu->selected_weekday_configuration = resolve_weekday_configuration(menu);
     }
     else if (menu->BTN_CON_PIN == gpio_btn)
     {
