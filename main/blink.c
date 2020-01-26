@@ -35,13 +35,15 @@
 
 #define TIMER_DIVIDER 16                             //  Hardware timer clock divider
 #define TIMER_SCALE (TIMER_BASE_CLK / TIMER_DIVIDER) // convert counter value to seconds
-#define TIMER_INTERVAL0_SEC (1)                      // sample test interval for the first timer
-#define TEST_WITHOUT_RELOAD 0                        // testing will be done without auto reload
-#define TEST_WITH_RELOAD 1                           // testing will be done with auto reload
+#define TIMER_INTERVAL0_SEC (10)
+#define WEB_API_UPDATE_INTERVAL_SEC (3600 / TIMER_INTERVAL0_SEC)
+#define TEST_WITHOUT_RELOAD 0 // testing will be done without auto reload
+#define TEST_WITH_RELOAD 1    // testing will be done with auto reload
 
 #define GPIO_BTN_BACK 27
 #define GPIO_BTN_OK 14
 #define GPIO_BTN_CON 12
+#define GPIO_BTN_MANUAL_CTRL 15
 #define GPIO_INPUT_PIN_SEL ((1ULL << GPIO_BTN_BACK) | (1ULL << GPIO_BTN_OK) | (1ULL << GPIO_BTN_CON))
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -49,8 +51,8 @@
 #define EXAMPLE_ESP_WIFI_PASS "michalek"
 #define EXAMPLE_ESP_MAXIMUM_RETRY 10
 
-#define LED_ERROR_GPIO 34
-#define LED_MANUAL_ON_GPIO 35
+#define LED_ERROR_GPIO 13
+#define LED_MANUAL_ON_GPIO 21
 #define LED_RAIN_AUTO_OFF 32
 #define LED_WIFI_GPIO 33
 #define LED_ZONE0_GPIO 25
@@ -170,12 +172,33 @@ static int s_retry_num = 0;
 
 static char http_rcv_buffer[MAX_HTTP_RECV_BUFFER];
 
+static int web_api_update_counter = 0;
+
+static int disable_auto_ctrl = 0;
+
+static void toggle_wifi_led()
+{
+    gpio_set_level(LED_WIFI_GPIO, 0);
+    gpio_set_level(LED_WIFI_GPIO, 1);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    gpio_set_level(LED_WIFI_GPIO, 0);
+    vTaskDelete(NULL);
+}
+
+static void toggle_error_led()
+{
+    gpio_set_level(LED_ERROR_GPIO, 0);
+    gpio_set_level(LED_ERROR_GPIO, 1);
+    vTaskDelay(2000 / portTICK_PERIOD_MS);
+    gpio_set_level(LED_ERROR_GPIO, 0);
+    vTaskDelete(NULL);
+}
+
 static void event_handler(void *arg, esp_event_base_t event_base,
                           int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
-        gpio_set_level(LED_WIFI_GPIO, 1);
         esp_wifi_connect();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -198,7 +221,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
-
+        xTaskCreate(toggle_wifi_led, "wifi led toggle", 1024, NULL, 5, NULL);
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -243,13 +266,14 @@ void wifi_init_sta(void)
     {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
-        gpio_set_level(LED_WIFI_GPIO, 1);
+        xTaskCreate(toggle_wifi_led, "wifi led toggle", 1024, NULL, 5, NULL);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
         web_time_init_attempt_performed = 1;
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+        xTaskCreate(toggle_error_led, "error led toggle", 1024, NULL, 5, NULL);
         gpio_set_level(LED_WIFI_GPIO, 0);
     }
     else
@@ -364,9 +388,26 @@ static void gpio_task_example(void *arg)
     {
         if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY))
         {
-
-            menu_handle_btn(&menu, &lcd, io_num);
-            menu_flush_display(&menu, &lcd);
+            if (io_num == GPIO_BTN_MANUAL_CTRL)
+            {
+                if (gpio_get_level(GPIO_BTN_MANUAL_CTRL) == 0)
+                {
+                    printf("manual on\n");
+                    gpio_set_level(LED_MANUAL_ON_GPIO, 1);
+                    disable_auto_ctrl = 1;
+                }
+                else
+                {
+                    printf("manual off\n");
+                    gpio_set_level(LED_MANUAL_ON_GPIO, 0);
+                    disable_auto_ctrl = 0;
+                }
+            }
+            else
+            {
+                menu_handle_btn(&menu, &lcd, io_num);
+                menu_flush_display(&menu, &lcd);
+            }
 
             //debounce
             vTaskDelay(300 / portTICK_PERIOD_MS);
@@ -382,6 +423,7 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     case HTTP_EVENT_ERROR:
         web_time_init_attempt_performed = 1;
         ESP_LOGD(TAG_HTTP, "HTTP_EVENT_ERROR");
+        xTaskCreate(toggle_error_led, "error led toggle", 1024, NULL, 5, NULL);
         break;
     case HTTP_EVENT_ON_CONNECTED:
         ESP_LOGD(TAG_HTTP, "HTTP_EVENT_ON_CONNECTED");
@@ -409,11 +451,13 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
         printf("FINISH: %s\n\n", http_rcv_buffer);
         http_response_handle(&menu, http_rcv_buffer);
         http_rcv_buffer[0] = '\0';
+        xTaskCreate(toggle_wifi_led, "wifi led toggle", 1024, NULL, 5, NULL);
         web_time_init_attempt_performed = 1;
         break;
     case HTTP_EVENT_DISCONNECTED:
         ESP_LOGI(TAG_HTTP, "HTTP_EVENT_DISCONNECTED");
         int mbedtls_err = 0;
+
         esp_err_t err = esp_tls_get_and_clear_last_error(evt->data, &mbedtls_err, NULL);
         if (err != 0)
         {
@@ -444,6 +488,7 @@ static void http_rest_with_url(const char url[])
     else
     {
         ESP_LOGE(TAG_HTTP, "HTTP GET request failed: %s", esp_err_to_name(err));
+        xTaskCreate(toggle_error_led, "error led toggle", 1024, NULL, 5, NULL);
     }
 
     esp_http_client_cleanup(client);
@@ -458,13 +503,22 @@ static void http_test_task(void *pvParameters)
 
 static void http_wheather_task(void *pvParameters)
 {
-    http_rest_with_url("http://api.openweathermap.org/data/2.5/weather?id=1726705&appid=ac3f34fca395ad1ed070669087a2119d");
+    http_rest_with_url("http://api.openweathermap.org/data/2.5/weather?id=3099230&appid=ac3f34fca395ad1ed070669087a2119d");
     ESP_LOGI(TAG_HTTP, "Finish http wheather request");
     vTaskDelete(NULL);
 }
 
 static void perform_zone_ctrl()
 {
+    if (disable_auto_ctrl)
+    {
+        gpio_set_level(ZONE0_CTRL_GPIO, 1);
+        gpio_set_level(ZONE1_CTRL_GPIO, 1);
+        gpio_set_level(LED_ZONE0_GPIO, 1);
+        gpio_set_level(LED_ZONE1_GPIO, 1);
+        return;
+    }
+
     if (should_open_zone0(&menu))
     {
 
@@ -477,13 +531,13 @@ static void perform_zone_ctrl()
         {
             gpio_set_level(LED_ZONE0_GPIO, 1);
             gpio_set_level(ZONE0_CTRL_GPIO, 1);
+            gpio_set_level(LED_RAIN_AUTO_OFF, 0);
         }
     }
     else
     {
         gpio_set_level(LED_ZONE0_GPIO, 0);
         gpio_set_level(ZONE0_CTRL_GPIO, 0);
-        gpio_set_level(LED_RAIN_AUTO_OFF, 0);
     }
 
     if (should_open_zone1(&menu))
@@ -497,6 +551,7 @@ static void perform_zone_ctrl()
         {
             gpio_set_level(LED_ZONE1_GPIO, 1);
             gpio_set_level(ZONE1_CTRL_GPIO, 1);
+            gpio_set_level(LED_RAIN_AUTO_OFF, 0);
         }
     }
     else
@@ -512,6 +567,7 @@ static void perform_zone_ctrl()
  */
 static void timer_example_evt_task(void *arg)
 {
+
     while (!web_time_init_attempt_performed)
     {
     }
@@ -537,17 +593,33 @@ static void timer_example_evt_task(void *arg)
     }
 
     load_configuration(&dev, &menu);
+    menu_flush_display(&menu, &lcd);
 
     while (1)
     {
+
         timer_event_t evt;
         xQueueReceive(timer_queue, &evt, portMAX_DELAY);
-        ds1307_get_time(&dev, &time);
-        save_configuration(&dev, &menu);
-        menu_decode_time(&menu, &time);
-        menu_flush_display(&menu, &lcd);
 
-        perform_zone_ctrl();
+        if (evt.timer_idx == 0)
+        {
+            printf("10 seconds\n");
+            ds1307_get_time(&dev, &time);
+            save_configuration(&dev, &menu);
+            menu_decode_time(&menu, &time);
+            menu_flush_display(&menu, &lcd);
+            perform_zone_ctrl();
+
+            if (web_api_update_counter == 0)
+            {
+                printf("web api update \n");
+                esp_wifi_connect();
+                xTaskCreate(&http_wheather_task, "http_wheather_task", 8192, NULL, 5, NULL);
+            }
+
+            web_api_update_counter++;
+            web_api_update_counter %= WEB_API_UPDATE_INTERVAL_SEC;
+        }
     }
 }
 
@@ -557,6 +629,16 @@ void config_led_pins()
     gpio_set_direction(LED_WIFI_GPIO, GPIO_MODE_OUTPUT);
     gpio_set_pull_mode(LED_WIFI_GPIO, GPIO_PULLDOWN_ONLY);
     gpio_set_level(LED_WIFI_GPIO, 0);
+
+    gpio_pad_select_gpio(LED_ERROR_GPIO);
+    gpio_set_direction(LED_ERROR_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(LED_ERROR_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(LED_ERROR_GPIO, 0);
+
+    gpio_pad_select_gpio(LED_MANUAL_ON_GPIO);
+    gpio_set_direction(LED_MANUAL_ON_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(LED_MANUAL_ON_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(LED_MANUAL_ON_GPIO, 0);
 
     gpio_pad_select_gpio(LED_RAIN_AUTO_OFF);
     gpio_set_direction(LED_RAIN_AUTO_OFF, GPIO_MODE_OUTPUT);
@@ -618,15 +700,15 @@ void app_main(void)
 
     gpio_config_t io_conf;
 
-    //interrupt of rising edge
     io_conf.intr_type = GPIO_INTR_NEGEDGE;
-    //bit mask of the pins, use GPIO4/5 here
     io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
-    //set as input mode
     io_conf.mode = GPIO_MODE_INPUT;
-    //enable pull-up mode
     io_conf.pull_up_en = 1;
     io_conf.pull_down_en = 0;
+    gpio_intr_enable(GPIO_BTN_MANUAL_CTRL);
+    gpio_set_intr_type(GPIO_BTN_MANUAL_CTRL, GPIO_INTR_ANYEDGE);
+    gpio_set_direction(GPIO_BTN_MANUAL_CTRL, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(GPIO_BTN_MANUAL_CTRL, GPIO_PULLUP_ONLY);
     gpio_config(&io_conf);
 
     ESP_ERROR_CHECK(i2cdev_init());
@@ -643,6 +725,7 @@ void app_main(void)
     gpio_isr_handler_add(GPIO_BTN_BACK, gpio_isr_handler, (void *)GPIO_BTN_BACK);
     gpio_isr_handler_add(GPIO_BTN_OK, gpio_isr_handler, (void *)GPIO_BTN_OK);
     gpio_isr_handler_add(GPIO_BTN_CON, gpio_isr_handler, (void *)GPIO_BTN_CON);
+    gpio_isr_handler_add(GPIO_BTN_MANUAL_CTRL, gpio_isr_handler, (void *)GPIO_BTN_MANUAL_CTRL);
 
     timer_queue = xQueueCreate(10, sizeof(timer_event_t));
     example_tg0_timer_init(TIMER_0, TEST_WITHOUT_RELOAD, TIMER_INTERVAL0_SEC);

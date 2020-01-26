@@ -472,7 +472,7 @@ esp_err_t display_idle(menu_t *menu, const hd44780_t *lcd)
              tm->day, tm->month, tm->year, tm->hour, tm->minute);
     hd44780_puts(lcd, display_data);
     hd44780_gotoxy(lcd, 0, 1);
-    snprintf(display_data, 17, "RAIN: %02.2f mm", menu->rain_3h_mm);
+    snprintf(display_data, 17, "RAIN: %05.2f mm", menu->rain_3h_mm);
     hd44780_puts(lcd, display_data);
 
     return ESP_OK;
