@@ -5,6 +5,7 @@
 #include <hd44780.h>
 #include <timer_setup.h>
 #include <weekday_conversion.h>
+#include <time.h>
 
 #define ZONE_SELECTION_MSG "Choose zone"
 #define INTERVAL_SELECTION_MSG "Choose interval"
@@ -52,6 +53,18 @@ static char weekday_names[7][2] = {
 
 typedef struct
 {
+
+    int day;
+    int month;
+    int year;
+    int hour;
+    int minute;
+    int weekday;
+
+} current_time_t;
+
+typedef struct
+{
     uint8_t state;
     uint8_t time_selection_state;
     uint8_t weekday_selection_state;
@@ -64,10 +77,14 @@ typedef struct
     const uint8_t BTN_CON_PIN;
     timer_setup_t *zone0_timer_setup;
     timer_setup_t *zone1_timer_setup;
+    uint8_t current_weekday;
+    current_time_t *current_time;
 
 } menu_t;
 
 esp_err_t menu_handle_btn(menu_t *menu, const hd44780_t *lcd, uint8_t gpio_btn);
 esp_err_t menu_flush_display(menu_t *menu, const hd44780_t *lcd);
+void menu_decode_time(menu_t *menu, const struct tm *tm);
+void menu_encode_time(menu_t *menu, struct tm *tm);
 
 #endif

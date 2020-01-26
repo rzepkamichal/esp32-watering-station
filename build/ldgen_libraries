@@ -46,6 +46,7 @@
  /home/musr/dev/esp/projects/blink/build/hd44780/libhd44780.a
  /home/musr/dev/esp/projects/blink/build/heap/libheap.a
  /home/musr/dev/esp/projects/blink/build/hmc5883l/libhmc5883l.a
+ /home/musr/dev/esp/projects/blink/build/http_response_utils/libhttp_response_utils.a
  /home/musr/dev/esp/projects/blink/build/hx711/libhx711.a
  /home/musr/dev/esp/projects/blink/build/i2cdev/libi2cdev.a
  /home/musr/dev/esp/projects/blink/build/idf_test/libidf_test.a

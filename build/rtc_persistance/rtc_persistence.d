@@ -34,8 +34,8 @@ rtc_persistence.o: \
  /home/musr/dev/esp/esp-idf/components/esp_rom/include/esp32/rom/gpio.h \
  /home/musr/dev/esp/projects/blink/components/timer_setup/timer_setup.h \
  /home/musr/dev/esp/projects/blink/components/weekday_conversion/weekday_conversion.h \
- /home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h \
  /home/musr/dev/esp/esp-idf/components/newlib/platform_include/time.h \
+ /home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h \
  /home/musr/dev/esp/esp-idf-lib/components/i2cdev/i2cdev.h \
  /home/musr/dev/esp/esp-idf/components/driver/include/driver/i2c.h \
  /home/musr/dev/esp/esp-idf/components/freertos/include/freertos/FreeRTOS.h \
@@ -144,9 +144,9 @@ rtc_persistence.o: \
 
 /home/musr/dev/esp/projects/blink/components/weekday_conversion/weekday_conversion.h:
 
-/home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h:
-
 /home/musr/dev/esp/esp-idf/components/newlib/platform_include/time.h:
+
+/home/musr/dev/esp/esp-idf-lib/components/ds1307/ds1307.h:
 
 /home/musr/dev/esp/esp-idf-lib/components/i2cdev/i2cdev.h:
 

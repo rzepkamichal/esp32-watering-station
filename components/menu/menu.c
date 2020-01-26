@@ -465,7 +465,12 @@ esp_err_t display_idle(menu_t *menu, const hd44780_t *lcd)
 {
     hd44780_clear(lcd);
     hd44780_gotoxy(lcd, 0, 0);
-    hd44780_puts(lcd, "IDLE");
+    char display_data[17];
+
+    current_time_t *tm = menu->current_time;
+    snprintf(display_data, 17, "%02d.%02d.%04d %02d:%02d",
+             tm->day, tm->month, tm->year, tm->hour, tm->minute);
+    hd44780_puts(lcd, display_data);
 
     return ESP_OK;
 }
@@ -687,4 +692,26 @@ esp_err_t menu_flush_display(menu_t *menu, const hd44780_t *lcd)
     }
 
     return ESP_OK;
+}
+
+void menu_decode_time(menu_t *menu, const struct tm *tm)
+{
+    menu->current_time->day = tm->tm_mday;
+    menu->current_time->month = tm->tm_mon;
+    menu->current_time->year = tm->tm_year;
+    menu->current_time->hour = tm->tm_hour;
+    menu->current_time->minute = tm->tm_min;
+    menu->current_time->weekday = (tm->tm_wday - 1 + 7) % 7;
+}
+
+void menu_encode_time(menu_t *menu, struct tm *tm)
+{
+
+    tm->tm_mday = menu->current_time->day;
+    tm->tm_mon = menu->current_time->month;
+    tm->tm_year = menu->current_time->year;
+    tm->tm_hour = menu->current_time->hour;
+    tm->tm_min = menu->current_time->minute;
+    tm->tm_wday = (menu->current_time->weekday + 1) % 7;
+    tm->tm_sec = 0;
 }
