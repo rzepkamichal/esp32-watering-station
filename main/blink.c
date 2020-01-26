@@ -28,6 +28,7 @@
 #include "esp_http_client.h"
 #include <cJSON.h>
 #include "http_response_utils.h"
+#include "valve_ctrl_logic.h"
 
 #define SDA_GPIO 22
 #define SCL_GPIO 23
@@ -48,6 +49,16 @@
 #define EXAMPLE_ESP_WIFI_PASS "michalek"
 #define EXAMPLE_ESP_MAXIMUM_RETRY 10
 
+#define LED_ERROR_GPIO 34
+#define LED_MANUAL_ON_GPIO 35
+#define LED_RAIN_AUTO_OFF 32
+#define LED_WIFI_GPIO 33
+#define LED_ZONE0_GPIO 25
+#define LED_ZONE1_GPIO 26
+
+#define ZONE0_CTRL_GPIO 0
+#define ZONE1_CTRL_GPIO 2
+
 /* FreeRTOS event group to signal when we are connected*/
 static EventGroupHandle_t s_wifi_event_group;
 
@@ -57,7 +68,7 @@ static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
 #define WIFI_FAIL_BIT BIT1
 
-#define MAX_HTTP_RECV_BUFFER 4096
+#define MAX_HTTP_RECV_BUFFER 2048
 static const char *TAG_HTTP = "HTTP_CLIENT";
 
 static uint8_t web_time_init_attempt_performed = 0;
@@ -147,7 +158,8 @@ static menu_t menu = {
     .BTN_CON_PIN = GPIO_BTN_CON,
     .zone0_timer_setup = &zone0_timer_setup,
     .zone1_timer_setup = &zone1_timer_setup,
-    .current_time = &current_time};
+    .current_time = &current_time,
+    .rain_3h_mm = 0.0};
 
 static xQueueHandle gpio_evt_queue = NULL;
 xQueueHandle timer_queue;
@@ -163,6 +175,7 @@ static void event_handler(void *arg, esp_event_base_t event_base,
 {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
+        gpio_set_level(LED_WIFI_GPIO, 1);
         esp_wifi_connect();
     }
     else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
@@ -178,12 +191,14 @@ static void event_handler(void *arg, esp_event_base_t event_base,
             xEventGroupSetBits(s_wifi_event_group, WIFI_FAIL_BIT);
         }
         ESP_LOGI(TAG, "connect to the AP fail");
+        gpio_set_level(LED_WIFI_GPIO, 0);
     }
     else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
     {
         ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
         ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
         s_retry_num = 0;
+
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
     }
 }
@@ -228,12 +243,14 @@ void wifi_init_sta(void)
     {
         ESP_LOGI(TAG, "connected to ap SSID:%s password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+        gpio_set_level(LED_WIFI_GPIO, 1);
     }
     else if (bits & WIFI_FAIL_BIT)
     {
         web_time_init_attempt_performed = 1;
         ESP_LOGI(TAG, "Failed to connect to SSID:%s, password:%s",
                  EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASS);
+        gpio_set_level(LED_WIFI_GPIO, 0);
     }
     else
     {
@@ -348,8 +365,6 @@ static void gpio_task_example(void *arg)
         if (xQueueReceive(gpio_evt_queue, &io_num, portMAX_DELAY))
         {
 
-            printf("GPIO[%d] intr, val: %d\n", io_num, gpio_get_level(io_num));
-
             menu_handle_btn(&menu, &lcd, io_num);
             menu_flush_display(&menu, &lcd);
 
@@ -410,10 +425,10 @@ esp_err_t _http_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-static void http_rest_with_url(void)
+static void http_rest_with_url(const char url[])
 {
     esp_http_client_config_t config = {
-        .url = "http://worldtimeapi.org/api/timezone/Europe/Warsaw",
+        .url = url,
         .event_handler = _http_event_handler,
     };
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -436,9 +451,60 @@ static void http_rest_with_url(void)
 
 static void http_test_task(void *pvParameters)
 {
-    http_rest_with_url();
-    ESP_LOGI(TAG_HTTP, "Finish http example");
+    http_rest_with_url("http://worldtimeapi.org/api/timezone/Europe/Warsaw");
+    ESP_LOGI(TAG_HTTP, "Finish http time request");
     vTaskDelete(NULL);
+}
+
+static void http_wheather_task(void *pvParameters)
+{
+    http_rest_with_url("http://api.openweathermap.org/data/2.5/weather?id=1726705&appid=ac3f34fca395ad1ed070669087a2119d");
+    ESP_LOGI(TAG_HTTP, "Finish http wheather request");
+    vTaskDelete(NULL);
+}
+
+static void perform_zone_ctrl()
+{
+    if (should_open_zone0(&menu))
+    {
+
+        if (menu.rain_3h_mm >= RAIN_MM_3h_HEAVY)
+        {
+            gpio_set_level(LED_RAIN_AUTO_OFF, 1);
+            gpio_set_level(ZONE0_CTRL_GPIO, 0);
+        }
+        else
+        {
+            gpio_set_level(LED_ZONE0_GPIO, 1);
+            gpio_set_level(ZONE0_CTRL_GPIO, 1);
+        }
+    }
+    else
+    {
+        gpio_set_level(LED_ZONE0_GPIO, 0);
+        gpio_set_level(ZONE0_CTRL_GPIO, 0);
+        gpio_set_level(LED_RAIN_AUTO_OFF, 0);
+    }
+
+    if (should_open_zone1(&menu))
+    {
+        if (menu.rain_3h_mm >= RAIN_MM_3h_HEAVY)
+        {
+            gpio_set_level(LED_RAIN_AUTO_OFF, 1);
+            gpio_set_level(ZONE1_CTRL_GPIO, 0);
+        }
+        else
+        {
+            gpio_set_level(LED_ZONE1_GPIO, 1);
+            gpio_set_level(ZONE1_CTRL_GPIO, 1);
+        }
+    }
+    else
+    {
+        gpio_set_level(LED_ZONE1_GPIO, 0);
+        gpio_set_level(LED_RAIN_AUTO_OFF, 0);
+        gpio_set_level(ZONE1_CTRL_GPIO, 0);
+    }
 }
 
 /*
@@ -446,7 +512,9 @@ static void http_test_task(void *pvParameters)
  */
 static void timer_example_evt_task(void *arg)
 {
-    while(!web_time_init_attempt_performed){}
+    while (!web_time_init_attempt_performed)
+    {
+    }
 
     i2c_dev_t dev;
     memset(&dev, 0, sizeof(i2c_dev_t));
@@ -455,8 +523,6 @@ static void timer_example_evt_task(void *arg)
 
     struct tm time = {0};
 
-    // printf("godzina: %d \n\n", menu.current_time->hour);
-    // printf("dzien: %d \n\n", menu.current_time->day);
     if (menu.current_time->year != 0)
     {
         //if time already loaded from internet, save to RTC
@@ -470,7 +536,7 @@ static void timer_example_evt_task(void *arg)
         menu_decode_time(&menu, &time);
     }
 
-    ESP_ERROR_CHECK(ds1307_set_time(&dev, &time));
+    load_configuration(&dev, &menu);
 
     while (1)
     {
@@ -480,11 +546,53 @@ static void timer_example_evt_task(void *arg)
         save_configuration(&dev, &menu);
         menu_decode_time(&menu, &time);
         menu_flush_display(&menu, &lcd);
+
+        perform_zone_ctrl();
     }
+}
+
+void config_led_pins()
+{
+    gpio_pad_select_gpio(LED_WIFI_GPIO);
+    gpio_set_direction(LED_WIFI_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(LED_WIFI_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(LED_WIFI_GPIO, 0);
+
+    gpio_pad_select_gpio(LED_RAIN_AUTO_OFF);
+    gpio_set_direction(LED_RAIN_AUTO_OFF, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(LED_RAIN_AUTO_OFF, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(LED_RAIN_AUTO_OFF, 0);
+
+    gpio_pad_select_gpio(LED_ZONE0_GPIO);
+    gpio_set_direction(LED_ZONE0_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(LED_ZONE0_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(LED_ZONE0_GPIO, 0);
+
+    gpio_pad_select_gpio(LED_ZONE1_GPIO);
+    gpio_set_direction(LED_ZONE1_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(LED_ZONE1_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(LED_ZONE1_GPIO, 0);
+}
+
+void config_valve_pins()
+{
+    gpio_pad_select_gpio(ZONE0_CTRL_GPIO);
+    gpio_set_direction(ZONE0_CTRL_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(ZONE0_CTRL_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(ZONE0_CTRL_GPIO, 0);
+
+    gpio_pad_select_gpio(ZONE1_CTRL_GPIO);
+    gpio_set_direction(ZONE1_CTRL_GPIO, GPIO_MODE_OUTPUT);
+    gpio_set_pull_mode(ZONE1_CTRL_GPIO, GPIO_PULLDOWN_ONLY);
+    gpio_set_level(ZONE1_CTRL_GPIO, 0);
 }
 
 void app_main(void)
 {
+
+    config_led_pins();
+    config_valve_pins();
+
     //Initialize NVS
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
@@ -539,4 +647,6 @@ void app_main(void)
     timer_queue = xQueueCreate(10, sizeof(timer_event_t));
     example_tg0_timer_init(TIMER_0, TEST_WITHOUT_RELOAD, TIMER_INTERVAL0_SEC);
     xTaskCreate(timer_example_evt_task, "timer_evt_task", 2048, NULL, 5, NULL);
+
+    xTaskCreate(&http_wheather_task, "http_wheather_task", 8192, NULL, 5, NULL);
 }

@@ -13,6 +13,12 @@
 #define OFF_TIME_SELECTION_MSG "Set OFF time"
 #define DAY_SELECTION_MSG "Set active days"
 
+#define LIGHT_RAIN_MSG "Light"
+#define MODERATE_RAIN_MSG "Moderate"
+#define HEAVY_RAIN_MSG "Heavy"
+#define NO_RAIN_MSG "None"
+
+
 typedef enum MenuState
 {
     IDLE = 0,
@@ -79,6 +85,7 @@ typedef struct
     timer_setup_t *zone1_timer_setup;
     uint8_t current_weekday;
     current_time_t *current_time;
+    double rain_3h_mm;
 
 } menu_t;
 

@@ -471,6 +471,9 @@ esp_err_t display_idle(menu_t *menu, const hd44780_t *lcd)
     snprintf(display_data, 17, "%02d.%02d.%04d %02d:%02d",
              tm->day, tm->month, tm->year, tm->hour, tm->minute);
     hd44780_puts(lcd, display_data);
+    hd44780_gotoxy(lcd, 0, 1);
+    snprintf(display_data, 17, "RAIN: %02.2f mm", menu->rain_3h_mm);
+    hd44780_puts(lcd, display_data);
 
     return ESP_OK;
 }
@@ -600,23 +603,7 @@ esp_err_t display_any_time_selection(menu_t *menu, const hd44780_t *lcd)
         }
     }
 
-    if (hour < 10 && minute < 10)
-    {
-        snprintf(display_data, buffer_size, "0%d:0%d", hour, minute);
-    }
-    else if (minute < 10)
-    {
-        snprintf(display_data, buffer_size, "%d:0%d", hour, minute);
-    }
-
-    else if (hour < 10)
-    {
-        snprintf(display_data, buffer_size, "0%d:%d", hour, minute);
-    }
-    else
-    {
-        snprintf(display_data, buffer_size, "%d:%d", hour, minute);
-    }
+    snprintf(display_data, buffer_size, "%02d:%02d", hour, minute);
 
     hd44780_puts(lcd, display_data);
     if (HOUR == menu->time_selection_state)

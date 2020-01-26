@@ -100,6 +100,7 @@
  /home/musr/dev/esp/projects/blink/build/ulp/libulp.a
  /home/musr/dev/esp/projects/blink/build/ultrasonic/libultrasonic.a
  /home/musr/dev/esp/projects/blink/build/unity/libunity.a
+ /home/musr/dev/esp/projects/blink/build/valve_ctrl_logic/libvalve_ctrl_logic.a
  /home/musr/dev/esp/projects/blink/build/vfs/libvfs.a
  /home/musr/dev/esp/projects/blink/build/wear_levelling/libwear_levelling.a
  /home/musr/dev/esp/projects/blink/build/weekday_conversion/libweekday_conversion.a

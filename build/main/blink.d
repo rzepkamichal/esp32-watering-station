@@ -195,7 +195,8 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
  /home/musr/dev/esp/esp-idf/components/esp_http_client/include/esp_http_client.h \
  /home/musr/dev/esp/esp-idf/components/nghttp/port/include/http_parser.h \
  /home/musr/dev/esp/esp-idf/components/json/cJSON/cJSON.h \
- /home/musr/dev/esp/projects/blink/components/http_response_utils/http_response_utils.h
+ /home/musr/dev/esp/projects/blink/components/http_response_utils/http_response_utils.h \
+ /home/musr/dev/esp/projects/blink/components/valve_ctrl_logic/valve_ctrl_logic.h
 
 /home/musr/dev/esp/esp-idf/components/newlib/platform_include/sys/time.h:
 
@@ -590,4 +591,6 @@ blink.o: /home/musr/dev/esp/projects/blink/main/blink.c \
 /home/musr/dev/esp/esp-idf/components/json/cJSON/cJSON.h:
 
 /home/musr/dev/esp/projects/blink/components/http_response_utils/http_response_utils.h:
+
+/home/musr/dev/esp/projects/blink/components/valve_ctrl_logic/valve_ctrl_logic.h:
 /home/musr/dev/esp/projects/blink/main/./blink.c:
